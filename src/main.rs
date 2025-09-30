@@ -5,6 +5,7 @@ use colored::*;
 mod commands;
 mod interactive;
 mod utils;
+mod qqwry;
 
 use interactive::InteractiveSession;
 use utils::output;
@@ -45,6 +46,11 @@ enum Commands {
         #[command(subcommand)]
         action: commands::CryptoCommands,
     },
+    /// Web安全工具
+    Web {
+        #[command(subcommand)]
+        action: commands::WebCommands,
+    },
 }
 
 #[tokio::main]
@@ -83,6 +89,9 @@ async fn handle_direct_command(command: Commands) -> Result<()> {
         }
         Commands::Crypto { action } => {
             commands::crypto::handle_crypto_command(action).await?;
+        }
+        Commands::Web { action } => {
+            commands::web::handle_web_command(action).await?;
         }
     }
     Ok(())

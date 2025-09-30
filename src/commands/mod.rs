@@ -3,6 +3,8 @@ pub mod system;
 pub mod network;
 pub mod text;
 pub mod crypto;
+pub mod web;
+pub mod web_scan;
 pub mod enhanced_scan;
 pub mod syn_scan;
 
@@ -17,6 +19,8 @@ pub use system::SystemCommands;
 pub use network::NetworkCommands;
 pub use text::TextCommands;
 pub use crypto::CryptoCommands;
+pub use web::WebCommands;
+pub use web_scan::WebScanCommands;
 
 /// 获取所有可用命令用于自动补全建议
 /// 
@@ -44,6 +48,14 @@ pub fn get_all_commands() -> Vec<String> {
     
     for cmd in CryptoCommands::iter() {
         commands.push(format!("crypto {}", to_kebab_case(&cmd.to_string())));
+    }
+
+    for cmd in WebCommands::iter() {
+        commands.push(format!("web {}", to_kebab_case(&cmd.to_string())));
+    }
+    
+    for cmd in WebScanCommands::iter() {
+        commands.push(format!("web-scan {}", to_kebab_case(&cmd.to_string())));
     }
     
     // 全局命令 (在session.rs中处理)

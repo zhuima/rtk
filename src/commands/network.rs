@@ -10,6 +10,7 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use futures::future::join_all;
 use indicatif::{ProgressBar, ProgressStyle};
+use crate::qqwry::QQwry;
 
 #[derive(Subcommand, Clone, EnumIter, Display)]
 pub enum NetworkCommands {
@@ -80,6 +81,9 @@ pub enum NetworkCommands {
         /// Query type (A, AAAA, MX, TXT, etc.)
         #[arg(short, long, default_value = "A")]
         query_type: String,
+        /// Show IP geolocation info
+        #[arg(long, default_value = "false")]
+        geo: bool,
     },
     /// SSL/TLS certificate analysis and security scan
     Ssl {
@@ -212,8 +216,8 @@ pub async fn handle_network_command(command: NetworkCommands) -> Result<()> {
                 output::print_error("Either --target <TARGET> (supports comma-separated hosts) or --file <FILE> must be specified");
             }
         }
-        NetworkCommands::Dns { domain, query_type } => {
-            dns_query(&domain, &query_type).await?;
+        NetworkCommands::Dns { domain, query_type, geo } => {
+            dns_query(&domain, &query_type, geo).await?;
         }
         NetworkCommands::Ssl { target, port, detailed, transparency, timeout, file, output_format } => {
             if let Some(file_path) = file {
@@ -452,14 +456,28 @@ const SERVICE_BANNERS: &[(&str, &str)] = &[
     ("MongoDB", "mongodb"),
 ];
 
-async fn dns_query(domain: &str, query_type: &str) -> Result<()> {
+async fn dns_query(domain: &str, query_type: &str, show_geo: bool) -> Result<()> {
     output::print_header(&format!("🔍 DNS Query: {} ({})", domain, query_type));
 
     match tokio::net::lookup_host(format!("{}:80", domain)).await {
         Ok(addrs) => {
             output::print_success("DNS resolution successful:");
+
             for addr in addrs {
-                output::print_normal(&format!("  {}", addr.ip()));
+                let ip = addr.ip();
+                output::print_normal(&format!("  {}", ip));
+
+                // Show geolocation info if requested
+                if show_geo {
+                    match get_ip_geolocation(&ip.to_string()).await {
+                        Ok(location) => {
+                            output::print_normal(&format!("    📍 Location: {}", location));
+                        }
+                        Err(e) => {
+                            output::print_warning(&format!("    📍 Geolocation lookup failed: {}", e));
+                        }
+                    }
+                }
             }
         }
         Err(e) => {
@@ -468,6 +486,44 @@ async fn dns_query(domain: &str, query_type: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+// Function to get IP geolocation using QQwry database
+async fn get_ip_geolocation(ip: &str) -> Result<String> {
+    // Try to load QQwry database file
+    let qqwry = match QQwry::new("qqwry.dat") {
+        Ok(db) => Some(db),
+        Err(_) => {
+            output::print_warning("Failed to load QQwry database (qqwry.dat)");
+            None
+        }
+    };
+
+    if let Some(db) = qqwry {
+        match db.lookup(ip) {
+            Ok(location) => {
+                // Clean up the location string similar to nali's processing
+                // Remove "CZ88.NET" and other placeholder values
+                let cleaned = location
+                    .replace("CZ88.NET", "")
+                    .replace("0", "")
+                    .trim()
+                    .to_string();
+
+                if cleaned.is_empty() {
+                    Ok("Unknown location".to_string())
+                } else {
+                    Ok(cleaned)
+                }
+            }
+            Err(e) => {
+                output::print_warning(&format!("QQwry lookup failed: {}", e));
+                Ok("Unknown location".to_string())
+            }
+        }
+    } else {
+        Ok("Unknown location".to_string())
+    }
 }
 
 // Dedicated SSL/TLS scanning function

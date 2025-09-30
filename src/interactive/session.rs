@@ -44,6 +44,17 @@ enum Commands {
         #[command(subcommand)]
         action: commands::CryptoCommands,
     },
+    /// Web安全工具
+    Web {
+        #[command(subcommand)]
+        action: commands::WebCommands,
+    },
+    /// Web目录扫描命令
+    #[command(name = "web-scan")]
+    WebScan {
+        #[command(subcommand)]
+        action: commands::WebScanCommands,
+    },
 }
 
 impl InteractiveSession {
@@ -69,6 +80,12 @@ impl InteractiveSession {
             }
             Commands::Crypto { action } => {
                 commands::crypto::handle_crypto_command(action).await?;
+            }
+            Commands::Web { action } => {
+                commands::web::handle_web_command(action).await?;
+            }
+            Commands::WebScan { action } => {
+                commands::web_scan::handle_web_scan_command(action).await?;
             }
         }
         Ok(())
@@ -191,6 +208,10 @@ impl InteractiveSession {
         output::print_normal("  crypto password [length]      - Generate password");
         output::print_normal("  crypto base64 <text>         - Base64 encode/decode");
         output::print_normal("  crypto caesar <text>         - Caesar cipher");
+
+        output::print_colored("\n🕸️  Web Security Tools:", colored::Color::Cyan);
+        output::print_normal("  web scan <url>                - Web directory scanning");
+        output::print_normal("  web recon <url>               - Web reconnaissance");
 
         output::print_colored("\n🔧 Other Commands:", colored::Color::Cyan);
         output::print_normal("  help                         - Show this help message");

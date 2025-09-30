@@ -64,3 +64,7 @@ socket2 = "0.5"
 # WHOIS客户端 (using simple TCP implementation instead)
 # 异步处理
 futures = "0.3"
+url = "2.5.7"
+# IP地理位置查询 - QQwry implementation
+byteorder = "1.4"
+encoding = "0.2"
