@@ -49,12 +49,6 @@ enum Commands {
         #[command(subcommand)]
         action: commands::WebCommands,
     },
-    /// Web目录扫描命令
-    #[command(name = "web-scan")]
-    WebScan {
-        #[command(subcommand)]
-        action: commands::WebScanCommands,
-    },
 }
 
 impl InteractiveSession {
@@ -83,9 +77,6 @@ impl InteractiveSession {
             }
             Commands::Web { action } => {
                 commands::web::handle_web_command(action).await?;
-            }
-            Commands::WebScan { action } => {
-                commands::web_scan::handle_web_scan_command(action).await?;
             }
         }
         Ok(())
