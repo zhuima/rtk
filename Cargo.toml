@@ -1,0 +1,66 @@
+[package]
+name = "toolkit-rs"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "A powerful and efficient CLI toolkit built with Rust"
+license = "MIT"
+
+[[bin]]
+name = "rtk"
+path = "src/main.rs"
+
+[dependencies]
+# 命令行参数解析
+clap = { version = "4", features = ["derive"] }
+# 异步运行时
+tokio = { version = "1", features = ["full"] }
+# 序列化/反序列化
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+# HTTP客户端
+reqwest = { version = "0.12", features = ["json"] }
+# 加密哈希
+sha2 = "0.10"
+hex = "0.4"
+md5 = "0.7"
+sha1 = "0.10"
+base64 = "0.21"
+# 文件系统遍历
+walkdir = "2.5"
+# 正则表达式
+regex = "1.11"
+# 时间处理
+chrono = { version = "0.4", features = ["serde"] }
+# 彩色输出
+colored = "3.0"
+# 进度条
+indicatif = "0.18"
+# 错误处理
+anyhow = "1.0"
+thiserror = "1.0"
+# 系统信息
+sysinfo = "0.30"
+os_info = "3.7"
+# 终端控制
+crossterm = "0.29"
+# 随机数生成
+rand = "0.9"
+# TUI框架
+ratatui = { version = "0.29", features = ["crossterm"] }
+# 交互式输入
+inquire = "0.7.5"
+# 枚举工具
+strum = { version = "0.26", features = ["derive"] }
+# SSL/TLS
+native-tls = "0.2"
+x509-parser = "0.16"
+# 网络工具
+trust-dns-resolver = "0.23"
+socket2 = "0.5"
+# 注释掉的数据包处理依赖 (用于真正的SYN扫描)
+# pnet = "0.35"
+# pnet_datalink = "0.35"
+# WHOIS客户端 (using simple TCP implementation instead)
+# 异步处理
+futures = "0.3"
