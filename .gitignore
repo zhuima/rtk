@@ -1,1 +1,10 @@
 /target
+test_ip.txt
+test_ip2region.py
+test_new_xdb.py
+test_qqwry.py
+ip2region.xdb
+ip2region_v4.xdb
+debug_qqwry.rs
+ip2region/
+test_commands.txt

@@ -1,0 +1,177 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release'
+        required: true
+        default: 'v0.1.0'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_id: ${{ steps.create_release.outputs.id }}
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+        release_name: Release ${{ github.event.inputs.tag || github.ref_name }}
+        draft: false
+        prerelease: false
+        body: |
+          ## 🚀 RTK (Rust Toolkit) Release ${{ github.event.inputs.tag || github.ref_name }}
+          
+          ### 📦 下载
+          
+          选择适合你操作系统的版本：
+          
+          - **Linux (x86_64)**: `rtk-linux-x86_64.tar.gz`
+          - **macOS (x86_64)**: `rtk-macos-x86_64.tar.gz`  
+          - **macOS (ARM64)**: `rtk-macos-aarch64.tar.gz`
+          - **Windows (x86_64)**: `rtk-windows-x86_64.zip`
+          
+          ### 🛠️ 安装方法
+          
+          #### Linux/macOS
+          ```bash
+          # 下载并解压
+          tar -xzf rtk-*.tar.gz
+          
+          # 移动到系统路径（可选）
+          sudo mv rtk /usr/local/bin/
+          
+          # 验证安装
+          rtk --version
+          ```
+          
+          #### Windows
+          ```powershell
+          # 解压 zip 文件
+          # 将 rtk.exe 添加到 PATH 环境变量
+          # 或直接运行
+          .\rtk.exe --version
+          ```
+          
+          ### ✨ 主要功能
+          
+          - 🔍 **文件操作**: 搜索、统计、重命名、重复检测
+          - 💻 **系统信息**: 系统监控、进程管理、资源统计  
+          - 🌐 **网络工具**: HTTP请求、端口扫描、DNS查询
+          - 📝 **文本处理**: 搜索、替换、统计、排序
+          - 🔐 **加密工具**: 哈希计算、密码生成、编码解码
+          - 🕸️ **Web安全**: 目录扫描、漏洞检测、信息收集
+          
+          ### 📖 使用指南
+          
+          ```bash
+          # 交互式模式
+          rtk
+          
+          # 直接命令模式
+          rtk system info
+          rtk network scan 192.168.1.1
+          rtk crypto password --length 20
+          ```
+          
+          更多详细信息请查看 [README.md](https://github.com/zhuima/rtk/blob/main/README.md)
+
+  build-release:
+    name: Build Release
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: rtk-linux-x86_64.tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: rtk-windows-x86_64.zip
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            name: rtk-macos-x86_64.tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: rtk-macos-aarch64.tar.gz
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+
+    - name: Configure cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ matrix.target }}
+
+    - name: Build release binary
+      run: cargo build --release --target ${{ matrix.target }}
+
+    - name: Create release archive (Unix)
+      if: matrix.os != 'windows-latest'
+      run: |
+        cd target/${{ matrix.target }}/release
+        if [ "${{ matrix.os }}" = "macos-latest" ]; then
+          # macOS需要处理二进制文件
+          strip rtk || true
+        else
+          # Linux
+          strip rtk
+        fi
+        tar -czf ../../../${{ matrix.name }} rtk
+        cd ../../..
+
+    - name: Create release archive (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        cd target/${{ matrix.target }}/release
+        7z a ../../../${{ matrix.name }} rtk.exe
+        cd ../../..
+
+    - name: Upload release asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./${{ matrix.name }}
+        asset_name: ${{ matrix.name }}
+        asset_content_type: application/octet-stream
+
+  publish-crates:
+    name: Publish to crates.io
+    needs: [create-release, build-release]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Configure cache
+      uses: Swatinem/rust-cache@v2
+
+    - name: Publish to crates.io
+      run: cargo publish --token ${{ secrets.CRATES_TOKEN }}
+      continue-on-error: true
